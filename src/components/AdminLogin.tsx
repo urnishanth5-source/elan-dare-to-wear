@@ -1,23 +1,19 @@
 import React, { useState } from 'react';
-import { 
-  getSupabase, 
-  isSupabaseConfigured, 
-  saveSupabaseConfig, 
-  clearSupabaseConfig, 
-  getStoredConfig 
+import {
+  getSupabase,
+  isSupabaseConfigured,
+  getStoredConfig,
+  saveSupabaseConfig,
 } from '../lib/supabase';
-import { 
-  Lock, 
-  Key, 
-  Database, 
-  Check, 
-  AlertCircle, 
-  ArrowLeft, 
-  Shield, 
+import {
+  Lock,
+  Key,
+  Database,
+  Check,
+  AlertCircle,
+  ArrowLeft,
+  Shield,
   RefreshCw,
-  Sparkles,
-  ExternalLink,
-  Info
 } from 'lucide-react';
 
 interface AdminLoginProps {
@@ -25,15 +21,21 @@ interface AdminLoginProps {
   onBackToStore: () => void;
 }
 
+const ALLOWED_ADMIN_EMAILS = new Set([
+  'admin@elanstore.com',
+  'admin@elan.com',
+  'nishanthur25baf035@skasc.ac.in',
+  'store@elan.in',
+]);
+
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackToStore }) => {
   const stored = getStoredConfig();
-  
-  // Credentials & Config
-  const [email, setEmail] = useState('admin@elanstore.com');
-  const [password, setPassword] = useState('elan2024');
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [supabaseUrl, setSupabaseUrl] = useState(stored.url || '');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState(stored.key || '');
-  
+
   const [isConfigOpen, setIsConfigOpen] = useState(!isSupabaseConfigured());
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -42,11 +44,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
   const handleSaveSupabaseConfig = (e: React.FormEvent) => {
     e.preventDefault();
     if (!supabaseUrl.trim() || !supabaseAnonKey.trim()) {
-      setErrorMessage('Please enter both Supabase Project URL and Anon Public Key.');
+      setErrorMessage('Please enter both Supabase Project URL and Publishable Key.');
       return;
     }
 
-    saveSupabaseConfig(supabaseUrl, supabaseAnonKey);
+    saveSupabaseConfig(supabaseUrl.trim(), supabaseAnonKey.trim());
     setConfigSaved(true);
     setErrorMessage(null);
     setTimeout(() => setConfigSaved(false), 3000);
@@ -57,75 +59,51 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
     setErrorMessage(null);
 
     const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password.trim();
+    const cleanPassword = password;
 
-    if (!cleanEmail) {
-      setErrorMessage('Please enter an admin email.');
+    if (!cleanEmail || !cleanPassword) {
+      setErrorMessage('Enter your admin email and password.');
+      return;
+    }
+
+    if (!ALLOWED_ADMIN_EMAILS.has(cleanEmail)) {
+      setErrorMessage('This account does not have administrator access.');
       return;
     }
 
     setLoading(true);
 
     try {
-      // 1. Try Supabase Auth if configured
       const supabase = getSupabase();
-      if (supabase && isSupabaseConfigured()) {
-        try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email: cleanEmail,
-            password: cleanPassword,
-          });
-
-          if (!error && data.session) {
-            localStorage.setItem('elan_admin_authenticated', 'true');
-            onLoginSuccess();
-            return;
-          }
-        } catch (supabaseErr) {
-          console.warn('Supabase remote auth attempt:', supabaseErr);
-        }
-      }
-
-      // 2. Default Store Administrator validation
-      // Accepts store admin email, owner email, or standard admin accounts
-      const validAdminEmails = [
-        'admin@elanstore.com',
-        'admin@elan.com',
-        'nishanthur25baf035@skasc.ac.in',
-        'store@elan.in',
-      ];
-
-      const isAdminEmail = validAdminEmails.includes(cleanEmail) || cleanEmail.includes('admin') || cleanEmail.includes('elan');
-
-      if (isAdminEmail || cleanPassword.length >= 4) {
-        localStorage.setItem('elan_admin_authenticated', 'true');
-        localStorage.setItem('elan_admin_email', cleanEmail);
-        onLoginSuccess();
+      if (!supabase || !isSupabaseConfigured()) {
+        setErrorMessage('Supabase authentication is not configured.');
         return;
       }
 
-      setErrorMessage('Invalid credentials. You can sign in with admin@elanstore.com or click Quick Admin Access below.');
-    } catch (err: any) {
-      console.warn('Admin sign-in catch:', err);
-      // Ensure graceful fallback for administrator
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password: cleanPassword,
+      });
+
+      if (error || !data.session || !data.user) {
+        setErrorMessage('Invalid admin email or password.');
+        return;
+      }
+
       localStorage.setItem('elan_admin_authenticated', 'true');
+      localStorage.setItem('elan_admin_email', cleanEmail);
       onLoginSuccess();
+    } catch (err) {
+      console.error('Admin sign-in error:', err);
+      setErrorMessage('Unable to sign in. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleInstantAdminAccess = () => {
-    localStorage.setItem('elan_admin_authenticated', 'true');
-    localStorage.setItem('elan_admin_email', 'admin@elanstore.com');
-    onLoginSuccess();
-  };
-
   return (
     <div className="min-h-screen bg-[#090a0f] flex items-center justify-center p-4">
       <div className="max-w-md w-full space-y-6">
-        
-        {/* Top Back Navigation */}
         <button
           onClick={onBackToStore}
           className="inline-flex items-center gap-2 text-xs font-semibold text-zinc-400 hover:text-white transition-colors"
@@ -134,46 +112,24 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
           <span>Back to elan. Storefront</span>
         </button>
 
-        {/* Main Card */}
         <div className="bg-[#12151d] border border-white/10 rounded-2xl p-6 sm:p-8 space-y-6 shadow-2xl">
-          
           <div className="text-center space-y-2">
             <div className="w-12 h-12 rounded-2xl bg-blue-600/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
               <Shield className="w-6 h-6" />
             </div>
-            <h1 className="text-2xl font-black text-white tracking-tight">
-              Store Admin Portal
-            </h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">Store Admin Portal</h1>
             <p className="text-xs text-zinc-400">
-              Manage inventory, live stock, pricing, and 4 categories for elan. Coimbatore.
+              Authorized store management access for elan. Coimbatore.
             </p>
           </div>
 
-          {/* Quick Credential Hint Box */}
-          <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-300 text-xs space-y-1">
-            <div className="flex items-center gap-2 font-bold text-white">
-              <Info className="w-4 h-4 text-blue-400 shrink-0" />
-              <span>Admin Credentials</span>
-            </div>
-            <p className="text-zinc-300 text-[11px]">
-              <strong>Email:</strong> <code>admin@elanstore.com</code> or <code>nishanthur25baf035@skasc.ac.in</code>
-            </p>
-            <p className="text-zinc-300 text-[11px]">
-              <strong>Password:</strong> <code>elan2024</code>
-            </p>
-          </div>
-
-          {/* Error alert */}
           {errorMessage && (
             <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-start gap-2.5">
               <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <div className="space-y-1">
-                <p>{errorMessage}</p>
-              </div>
+              <p>{errorMessage}</p>
             </div>
           )}
 
-          {/* Login Form */}
           <form onSubmit={handleSignIn} className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
@@ -220,19 +176,8 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
                 </>
               )}
             </button>
-
-            {/* Instant One-Click Access */}
-            <button
-              type="button"
-              onClick={handleInstantAdminAccess}
-              className="w-full py-2.5 rounded-xl bg-emerald-600/15 hover:bg-emerald-600/25 text-emerald-400 font-bold text-xs uppercase tracking-wider transition-colors border border-emerald-500/30 flex items-center justify-center gap-1.5"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Instant Store Manager Sign-In</span>
-            </button>
           </form>
 
-          {/* Supabase Connection Setup Drawer */}
           <div className="pt-4 border-t border-white/[0.08]">
             <button
               onClick={() => setIsConfigOpen(!isConfigOpen)}
@@ -240,7 +185,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
             >
               <span className="flex items-center gap-2 font-semibold">
                 <Database className="w-3.5 h-3.5 text-blue-400" />
-                <span>Supabase Live DB Credentials</span>
+                <span>Supabase Connection Settings</span>
               </span>
               <span className="text-[10px] text-blue-400 font-bold uppercase">
                 {isConfigOpen ? 'Hide' : 'Configure'}
@@ -250,9 +195,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
             {isConfigOpen && (
               <form onSubmit={handleSaveSupabaseConfig} className="mt-4 space-y-3 bg-[#090a0f] p-4 rounded-xl border border-white/10">
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-300 mb-1">
-                    Supabase Project URL
-                  </label>
+                  <label className="block text-[11px] font-bold text-zinc-300 mb-1">Supabase Project URL</label>
                   <input
                     type="url"
                     placeholder="https://xyzcompany.supabase.co"
@@ -263,12 +206,10 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-zinc-300 mb-1">
-                    Supabase Anon Public Key
-                  </label>
+                  <label className="block text-[11px] font-bold text-zinc-300 mb-1">Supabase Publishable Key</label>
                   <input
                     type="text"
-                    placeholder="eyJhbGciOi..."
+                    placeholder="sb_publishable_..."
                     value={supabaseAnonKey}
                     onChange={(e) => setSupabaseAnonKey(e.target.value)}
                     className="w-full text-xs bg-[#12151d] text-white px-3 py-2 rounded-lg border border-white/10 focus:border-blue-500 focus:outline-none font-mono"
@@ -285,9 +226,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
               </form>
             )}
           </div>
-
         </div>
-
       </div>
     </div>
   );
