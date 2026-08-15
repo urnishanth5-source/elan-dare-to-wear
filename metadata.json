@@ -1,0 +1,6 @@
+{
+  "name": "elan. — Ready-made Fashion for Men & Kids",
+  "description": "Trendy fashion for men & kids at honest prices in Coimbatore. Minimalist curated collections, store finder, instant WhatsApp styling inquiries, and collection lookbooks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
