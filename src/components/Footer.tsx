@@ -1,6 +1,6 @@
 import React from 'react';
 import { STORE_INFO } from '../data/products';
-import { MapPin, Phone, Clock, MessageCircle, Lock, ShieldCheck } from 'lucide-react';
+import { MapPin, Phone, Clock, MessageCircle } from 'lucide-react';
 
 interface FooterProps {
   setActiveTab: (tab: string) => void;
@@ -11,11 +11,7 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openWhatsAppModal 
   return (
     <footer className="border-t border-white/[0.08] bg-[#07080c] text-zinc-400 pt-16 pb-12 mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        
-        {/* Main Footer Row */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-12 border-b border-white/[0.08]">
-          
-          {/* Brand & Address Column */}
           <div className="md:col-span-5 space-y-4">
             <div className="flex items-center gap-2">
               <span className="text-2xl font-black tracking-tighter text-white">elan.</span>
@@ -39,69 +35,17 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openWhatsAppModal 
             </div>
           </div>
 
-          {/* Quick Nav Links */}
           <div className="md:col-span-3 space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">4 Categories</h4>
             <ul className="space-y-2 text-xs text-zinc-400">
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveTab('tshirts');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="hover:text-white transition-colors"
-                >
-                  T-Shirts & Drop Shoulders
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveTab('shirts');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="hover:text-white transition-colors"
-                >
-                  Linen Shirts & Pants
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveTab('summer');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="hover:text-white transition-colors"
-                >
-                  Summer Collection
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveTab('kids');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="hover:text-white transition-colors"
-                >
-                  Kids' Wear
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => {
-                    setActiveTab('collections');
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className="hover:text-white transition-colors"
-                >
-                  All Collections
-                </button>
-              </li>
+              <li><button onClick={() => { setActiveTab('tshirts'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors">T-Shirts & Drop Shoulders</button></li>
+              <li><button onClick={() => { setActiveTab('shirts'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors">Linen Shirts & Pants</button></li>
+              <li><button onClick={() => { setActiveTab('summer'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors">Summer Collection</button></li>
+              <li><button onClick={() => { setActiveTab('kids'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors">Kids' Wear</button></li>
+              <li><button onClick={() => { setActiveTab('collections'); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="hover:text-white transition-colors">All Collections</button></li>
             </ul>
           </div>
 
-          {/* Contact & Support */}
           <div className="md:col-span-4 space-y-3">
             <h4 className="text-xs font-bold uppercase tracking-wider text-white">Customer Support & Store</h4>
             <p className="text-xs text-zinc-400 leading-relaxed">
@@ -117,7 +61,6 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openWhatsAppModal 
           </div>
         </div>
 
-        {/* Bottom Legal Bar with Admin link */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500">
           <div className="flex items-center gap-2">
             <span>© 2024 elan. Coimbatore.</span>
@@ -126,22 +69,8 @@ export const Footer: React.FC<FooterProps> = ({ setActiveTab, openWhatsAppModal 
           </div>
 
           <div className="flex items-center gap-4 text-zinc-400 text-xs">
-            <button onClick={() => setActiveTab('about')} className="hover:text-white transition-colors">
-              Our Store
-            </button>
-            <button onClick={() => openWhatsAppModal('Exchange Policy')} className="hover:text-white transition-colors">
-              Exchange Policy
-            </button>
-            <button 
-              onClick={() => {
-                setActiveTab('admin');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-              }} 
-              className="hover:text-blue-400 transition-colors flex items-center gap-1 text-zinc-500 hover:text-zinc-300"
-            >
-              <Lock className="w-3 h-3" />
-              <span>Store Admin</span>
-            </button>
+            <button onClick={() => setActiveTab('about')} className="hover:text-white transition-colors">Our Store</button>
+            <button onClick={() => openWhatsAppModal('Exchange Policy')} className="hover:text-white transition-colors">Exchange Policy</button>
           </div>
         </div>
       </div>
