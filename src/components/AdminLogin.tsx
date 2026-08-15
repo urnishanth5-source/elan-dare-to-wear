@@ -22,10 +22,7 @@ interface AdminLoginProps {
 }
 
 const ALLOWED_ADMIN_EMAILS = new Set([
-  'admin@elanstore.com',
-  'admin@elan.com',
-  'nishanthur25baf035@skasc.ac.in',
-  'store@elan.in',
+  'urnishanth5@gmail.com',
 ]);
 
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackToStore }) => {
@@ -132,13 +129,11 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
 
           <form onSubmit={handleSignIn} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-                Admin Email
-              </label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">Admin Email</label>
               <input
                 type="email"
                 required
-                placeholder="admin@elanstore.com"
+                placeholder="urnishanth5@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full text-xs bg-[#090a0f] text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-blue-500 focus:outline-none transition-colors"
@@ -146,9 +141,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">
-                Password
-              </label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">Password</label>
               <input
                 type="password"
                 required
@@ -165,15 +158,9 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
               className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs uppercase tracking-wider transition-all duration-200 shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Signing in...</span>
-                </>
+                <><RefreshCw className="w-4 h-4 animate-spin" /><span>Signing in...</span></>
               ) : (
-                <>
-                  <Lock className="w-4 h-4" />
-                  <span>Sign In as Admin</span>
-                </>
+                <><Lock className="w-4 h-4" /><span>Sign In as Admin</span></>
               )}
             </button>
           </form>
@@ -183,43 +170,21 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
               onClick={() => setIsConfigOpen(!isConfigOpen)}
               className="w-full flex items-center justify-between text-xs text-zinc-400 hover:text-white py-1 transition-colors"
             >
-              <span className="flex items-center gap-2 font-semibold">
-                <Database className="w-3.5 h-3.5 text-blue-400" />
-                <span>Supabase Connection Settings</span>
-              </span>
-              <span className="text-[10px] text-blue-400 font-bold uppercase">
-                {isConfigOpen ? 'Hide' : 'Configure'}
-              </span>
+              <span className="flex items-center gap-2 font-semibold"><Database className="w-3.5 h-3.5 text-blue-400" /><span>Supabase Connection Settings</span></span>
+              <span className="text-[10px] text-blue-400 font-bold uppercase">{isConfigOpen ? 'Hide' : 'Configure'}</span>
             </button>
 
             {isConfigOpen && (
               <form onSubmit={handleSaveSupabaseConfig} className="mt-4 space-y-3 bg-[#090a0f] p-4 rounded-xl border border-white/10">
                 <div>
                   <label className="block text-[11px] font-bold text-zinc-300 mb-1">Supabase Project URL</label>
-                  <input
-                    type="url"
-                    placeholder="https://xyzcompany.supabase.co"
-                    value={supabaseUrl}
-                    onChange={(e) => setSupabaseUrl(e.target.value)}
-                    className="w-full text-xs bg-[#12151d] text-white px-3 py-2 rounded-lg border border-white/10 focus:border-blue-500 focus:outline-none"
-                  />
+                  <input type="url" placeholder="https://xyzcompany.supabase.co" value={supabaseUrl} onChange={(e) => setSupabaseUrl(e.target.value)} className="w-full text-xs bg-[#12151d] text-white px-3 py-2 rounded-lg border border-white/10 focus:border-blue-500 focus:outline-none" />
                 </div>
-
                 <div>
                   <label className="block text-[11px] font-bold text-zinc-300 mb-1">Supabase Publishable Key</label>
-                  <input
-                    type="text"
-                    placeholder="sb_publishable_..."
-                    value={supabaseAnonKey}
-                    onChange={(e) => setSupabaseAnonKey(e.target.value)}
-                    className="w-full text-xs bg-[#12151d] text-white px-3 py-2 rounded-lg border border-white/10 focus:border-blue-500 focus:outline-none font-mono"
-                  />
+                  <input type="text" placeholder="sb_publishable_..." value={supabaseAnonKey} onChange={(e) => setSupabaseAnonKey(e.target.value)} className="w-full text-xs bg-[#12151d] text-white px-3 py-2 rounded-lg border border-white/10 focus:border-blue-500 focus:outline-none font-mono" />
                 </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5"
-                >
+                <button type="submit" className="w-full py-2 rounded-lg bg-white/10 hover:bg-white/15 text-white font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5">
                   {configSaved ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Key className="w-3.5 h-3.5 text-blue-400" />}
                   <span>{configSaved ? 'Configuration Saved!' : 'Save Supabase Config'}</span>
                 </button>
