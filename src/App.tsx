@@ -15,59 +15,47 @@ import { Footer } from './components/Footer';
 import { AdminLogin } from './components/AdminLogin';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Product, mapSupabaseToProduct } from './data/products';
-import { fetchActiveProducts, getSupabase, isSupabaseConfigured } from './lib/supabase';
-import { AlertCircle, RefreshCw, Database } from 'lucide-react';
+import { fetchActiveProducts, getSupabase } from './lib/supabase';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 
 export function App() {
-  // Navigation State - defaults to 'home' storefront unless URL is specifically #admin or /admin
   const [activeTab, setActiveTab] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const path = window.location.pathname;
       const hash = window.location.hash;
-      if (path === '/admin' || hash === '#admin') {
-        return 'admin';
-      }
+      if (path === '/admin' || hash === '#admin') return 'admin';
     }
     return 'home';
   });
   const [currency, setCurrency] = useState<'INR' | 'USD'>('INR');
 
-  // Supabase Dynamic Products State
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // Supabase Auth State for Admin Dashboard (/admin)
+  // Admin access is granted only from a live Supabase Auth session.
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
 
-  // Interactive Modals
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
-
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
   const [whatsAppTopic, setWhatsAppTopic] = useState<string | undefined>(undefined);
   const [whatsAppProduct, setWhatsAppProduct] = useState<Product | null>(null);
-
-  // Cart / Shopping Bag State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
 
-  // Check URL path or hash for /admin on initial mount
   useEffect(() => {
     const handleUrlRouting = () => {
       const path = window.location.pathname;
       const hash = window.location.hash;
-      if (path === '/admin' || hash === '#admin') {
-        setActiveTab('admin');
-      }
+      if (path === '/admin' || hash === '#admin') setActiveTab('admin');
     };
     handleUrlRouting();
     window.addEventListener('popstate', handleUrlRouting);
     return () => window.removeEventListener('popstate', handleUrlRouting);
   }, []);
 
-  // Update browser history when activeTab changes
   useEffect(() => {
     if (activeTab === 'admin') {
       window.history.pushState(null, '', '#admin');
@@ -76,14 +64,8 @@ export function App() {
     }
   }, [activeTab]);
 
-  // Check Admin / Supabase Auth Session
   useEffect(() => {
     const checkSession = async () => {
-      const isLocalAuth = localStorage.getItem('elan_admin_authenticated') === 'true';
-      if (isLocalAuth) {
-        setIsAdminLoggedIn(true);
-      }
-
       const supabase = getSupabase();
       if (!supabase) {
         setCheckingAuth(false);
@@ -92,21 +74,16 @@ export function App() {
 
       try {
         const { data } = await supabase.auth.getSession();
-        if (data?.session) {
-          setIsAdminLoggedIn(true);
-        }
+        setIsAdminLoggedIn(Boolean(data?.session));
 
         const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-          if (session) {
-            setIsAdminLoggedIn(true);
-          }
+          setIsAdminLoggedIn(Boolean(session));
         });
 
-        return () => {
-          listener.subscription.unsubscribe();
-        };
+        return () => listener.subscription.unsubscribe();
       } catch (e) {
         console.warn('Auth verification error:', e);
+        setIsAdminLoggedIn(false);
       } finally {
         setCheckingAuth(false);
       }
@@ -115,24 +92,16 @@ export function App() {
     checkSession();
   }, []);
 
-  // Load Active Products from Supabase and subscribe to Realtime changes
   useEffect(() => {
     loadStoreProducts();
 
-    // Setup Supabase Realtime Subscription on table 'products'
     const supabase = getSupabase();
     if (supabase) {
       const channel = supabase
         .channel('public:products')
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'products' },
-          (payload) => {
-            console.log('Realtime product update received:', payload);
-            // Refresh product list immediately
-            loadStoreProducts();
-          }
-        )
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+          loadStoreProducts();
+        })
         .subscribe();
 
       return () => {
@@ -146,25 +115,18 @@ export function App() {
       setLoadingProducts(true);
       setDbError(null);
       const rows = await fetchActiveProducts();
-      const mapped = rows.map(mapSupabaseToProduct);
-      setProducts(mapped);
+      setProducts(rows.map(mapSupabaseToProduct));
     } catch (err: any) {
       console.error('Failed to load active products:', err);
-      setDbError(
-        err.message ||
-        'Could not fetch products. Please ensure your Supabase table is created and policies are configured.'
-      );
+      setDbError(err.message || 'Could not fetch products. Please ensure your Supabase table is created and policies are configured.');
     } finally {
       setLoadingProducts(false);
     }
   };
 
-  // Cart operations
   const handleAddToCart = (product: Product, size?: string) => {
     setCartItems((prev) => {
-      const existing = prev.find(
-        (item) => item.product.id === product.id && item.selectedSize === size
-      );
+      const existing = prev.find((item) => item.product.id === product.id && item.selectedSize === size);
       if (existing) {
         return prev.map((item) =>
           item.product.id === product.id && item.selectedSize === size
@@ -192,16 +154,11 @@ export function App() {
   };
 
   const handleRemoveCartItem = (productId: string, size?: string) => {
-    setCartItems((prev) =>
-      prev.filter((item) => !(item.product.id === productId && item.selectedSize === size))
-    );
+    setCartItems((prev) => prev.filter((item) => !(item.product.id === productId && item.selectedSize === size)));
   };
 
-  const handleClearCart = () => {
-    setCartItems([]);
-  };
+  const handleClearCart = () => setCartItems([]);
 
-  // WhatsApp Inquiries
   const handleOpenWhatsApp = (topicOrProductName?: string) => {
     setWhatsAppTopic(topicOrProductName);
     setWhatsAppProduct(null);
@@ -219,9 +176,7 @@ export function App() {
     setIsProductModalOpen(true);
   };
 
-  const toggleCurrency = () => {
-    setCurrency((prev) => (prev === 'INR' ? 'USD' : 'INR'));
-  };
+  const toggleCurrency = () => setCurrency((prev) => (prev === 'INR' ? 'USD' : 'INR'));
 
   const handleAdminLogout = async () => {
     localStorage.removeItem('elan_admin_authenticated');
@@ -241,7 +196,6 @@ export function App() {
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartProductIds = cartItems.map((item) => item.product.id);
 
-  // If viewing /admin route
   if (activeTab === 'admin') {
     if (checkingAuth) {
       return (
@@ -276,8 +230,6 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#090a0f] text-[#f1f5f9] flex flex-col justify-between selection:bg-blue-600 selection:text-white">
-      
-      {/* Top Navigation */}
       <div>
         <Navbar
           activeTab={activeTab}
@@ -287,10 +239,9 @@ export function App() {
           currency={currency}
           toggleCurrency={toggleCurrency}
           openWhatsAppModal={() => handleOpenWhatsApp('General Stylist Advice')}
-          isAdminLoggedIn={isAdminLoggedIn}
+          isAdminLoggedIn={false}
         />
 
-        {/* Database notice if unconfigured or error */}
         {dbError && (
           <div className="bg-rose-500/10 border-b border-rose-500/20 text-rose-300 py-2.5 px-4 text-xs">
             <div className="max-w-7xl mx-auto flex items-center justify-between gap-2">
@@ -298,110 +249,23 @@ export function App() {
                 <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
                 <span>Supabase connection notice: {dbError}</span>
               </div>
-              <button
-                onClick={() => setActiveTab('admin')}
-                className="underline font-bold hover:text-white shrink-0"
-              >
-                Configure in Admin
-              </button>
+              <button onClick={() => setActiveTab('admin')} className="underline font-bold hover:text-white shrink-0">Configure in Admin</button>
             </div>
           </div>
         )}
 
-        {/* Main Tab Renderers */}
         <main className="pb-12">
-          {activeTab === 'home' && (
-            <HomeScreen
-              products={products}
-              loading={loadingProducts}
-              currency={currency}
-              setActiveTab={setActiveTab}
-              openWhatsAppModal={handleOpenWhatsApp}
-              onProductClick={handleOpenQuickView}
-              onAddToCart={handleAddToCart}
-              cartProductIds={cartProductIds}
-            />
-          )}
-
-          {activeTab === 'collections' && (
-            <CollectionsScreen
-              products={products}
-              loading={loadingProducts}
-              currency={currency}
-              openWhatsAppModal={handleOpenWhatsApp}
-              onProductClick={handleOpenQuickView}
-              onAddToCart={handleAddToCart}
-              cartProductIds={cartProductIds}
-            />
-          )}
-
-          {activeTab === 'tshirts' && (
-            <TShirtsScreen
-              products={products}
-              loading={loadingProducts}
-              currency={currency}
-              openWhatsAppModal={handleOpenWhatsApp}
-              onProductClick={handleOpenQuickView}
-              onAddToCart={handleAddToCart}
-              cartProductIds={cartProductIds}
-            />
-          )}
-
-          {activeTab === 'shirts' && (
-            <ShirtsScreen
-              products={products}
-              loading={loadingProducts}
-              currency={currency}
-              openWhatsAppModal={handleOpenWhatsApp}
-              onProductClick={handleOpenQuickView}
-              onAddToCart={handleAddToCart}
-              cartProductIds={cartProductIds}
-            />
-          )}
-
-          {activeTab === 'summer' && (
-            <SummerScreen
-              products={products}
-              loading={loadingProducts}
-              currency={currency}
-              openWhatsAppModal={handleOpenWhatsApp}
-              onProductClick={handleOpenQuickView}
-              onAddToCart={handleAddToCart}
-              cartProductIds={cartProductIds}
-            />
-          )}
-
-          {activeTab === 'kids' && (
-            <KidsScreen
-              products={products}
-              loading={loadingProducts}
-              currency={currency}
-              openWhatsAppModal={handleOpenWhatsApp}
-              onProductClick={handleOpenQuickView}
-              onAddToCart={handleAddToCart}
-              cartProductIds={cartProductIds}
-            />
-          )}
-
-          {activeTab === 'new-arrivals' && (
-            <NewArrivalsScreen
-              products={products}
-              loading={loadingProducts}
-              currency={currency}
-              openWhatsAppModal={handleOpenWhatsApp}
-              onProductClick={handleOpenQuickView}
-              onAddToCart={handleAddToCart}
-              cartProductIds={cartProductIds}
-            />
-          )}
-
-          {activeTab === 'about' && (
-            <AboutScreen openWhatsAppModal={handleOpenWhatsApp} />
-          )}
+          {activeTab === 'home' && <HomeScreen products={products} loading={loadingProducts} currency={currency} setActiveTab={setActiveTab} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
+          {activeTab === 'collections' && <CollectionsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
+          {activeTab === 'tshirts' && <TShirtsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
+          {activeTab === 'shirts' && <ShirtsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
+          {activeTab === 'summer' && <SummerScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
+          {activeTab === 'kids' && <KidsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
+          {activeTab === 'new-arrivals' && <NewArrivalsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
+          {activeTab === 'about' && <AboutScreen openWhatsAppModal={handleOpenWhatsApp} />}
         </main>
       </div>
 
-      {/* Global Modals & Drawers */}
       <ProductModal
         product={selectedProduct}
         isOpen={isProductModalOpen}
@@ -438,13 +302,9 @@ export function App() {
         }}
       />
 
-      {/* Footer with Category links & Admin access */}
-      <Footer
-        setActiveTab={setActiveTab}
-        openWhatsAppModal={handleOpenWhatsApp}
-      />
-
+      <Footer setActiveTab={setActiveTab} openWhatsAppModal={handleOpenWhatsApp} />
     </div>
   );
 }
+
 export default App;
