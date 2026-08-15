@@ -22,7 +22,7 @@ interface AdminLoginProps {
 }
 
 const ALLOWED_ADMIN_EMAILS = new Set([
-  'urnishanth11@gmail.com',
+  'elan@daretowear.com',
 ]);
 
 export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackToStore }) => {
@@ -114,7 +114,7 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
           <form onSubmit={handleSignIn} className="space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">Admin Email</label>
-              <input type="email" required placeholder="urnishanth11@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-xs bg-[#090a0f] text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-blue-500 focus:outline-none transition-colors" />
+              <input type="email" required placeholder="elan@daretowear.com" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full text-xs bg-[#090a0f] text-white px-3.5 py-2.5 rounded-xl border border-white/10 focus:border-blue-500 focus:outline-none transition-colors" />
             </div>
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-zinc-300 mb-1.5">Password</label>
