@@ -83,6 +83,17 @@ export function App() {
     }
   }, []);
 
+  // When an authenticated admin opens #admin, take them directly to the Add Product form.
+  useEffect(() => {
+    if (!isAdminLoggedIn || activeTab !== 'admin') return;
+    const timer = window.setTimeout(() => {
+      const buttons = Array.from(document.querySelectorAll('button'));
+      const addProductButton = buttons.find((button) => button.textContent?.trim().includes('Add Product')) as HTMLButtonElement | undefined;
+      addProductButton?.click();
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [isAdminLoggedIn, activeTab]);
+
   const loadStoreProducts = async () => {
     try { setLoadingProducts(true); setDbError(null); const rows = await fetchActiveProducts(); setProducts(rows.map(mapSupabaseToProduct)); }
     catch (err: any) { console.error('Failed to load active products:', err); setDbError(err.message || 'Could not fetch products.'); }
@@ -111,10 +122,8 @@ export function App() {
 
   if (activeTab === 'admin') {
     if (checkingAuth) return <div className="min-h-screen bg-[#090a0f] flex items-center justify-center text-white"><RefreshCw className="w-6 h-6 animate-spin text-blue-500" /></div>;
-    if (!isAdminLoggedIn) {
-      return <AdminLogin onLoginSuccess={() => { setIsAdminLoggedIn(true); loadStoreProducts(); }} onBackToStore={() => setActiveTab('home')} />;
-    }
-    return <AdminDashboard onBackToStore={() => { setActiveTab('home'); loadStoreProducts(); }} onLogout={handleAdminLogout} openAddProductOnLoad={true} />;
+    if (!isAdminLoggedIn) return <AdminLogin onLoginSuccess={() => { setIsAdminLoggedIn(true); loadStoreProducts(); }} onBackToStore={() => setActiveTab('home')} />;
+    return <AdminDashboard onBackToStore={() => { setActiveTab('home'); loadStoreProducts(); }} onLogout={handleAdminLogout} />;
   }
 
   return (
