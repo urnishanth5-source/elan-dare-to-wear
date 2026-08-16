@@ -91,11 +91,11 @@ export async function fetchActiveProductsByCategory(category: ProductCategory): 
   return fetchStorefrontProducts(category);
 }
 
-export async function fetchAllProductsAdmin(): Promise<SupabaseProductRow[]> {
-  // Use the same Vercel-side proxy as the storefront. This avoids browser-side
-  // Supabase network/CORS failures in the admin portal while keeping the catalog
-  // backed by the same database.
-  const response = await fetch('/api/products?admin=true', { cache: 'no-store' });
+async function fetchAdminProductsFromProxy(): Promise<SupabaseProductRow[]> {
+  const response = await fetch('/api/products?admin=true', {
+    cache: 'no-store',
+    credentials: 'same-origin',
+  });
   const body = await response.text();
   if (!response.ok) {
     let message = body || `Product API returned ${response.status}`;
@@ -104,6 +104,35 @@ export async function fetchAllProductsAdmin(): Promise<SupabaseProductRow[]> {
   }
   const data = JSON.parse(body);
   return (Array.isArray(data) ? data : []).map(normalizeProductRow);
+}
+
+export async function fetchAllProductsAdmin(): Promise<SupabaseProductRow[]> {
+  // Prefer the Vercel-side proxy. If the browser briefly loses the proxy
+  // connection, fall back to the same Supabase database using the publishable
+  // client so the admin page does not get stuck on a transient "Failed to fetch".
+  let lastError: unknown = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      return await fetchAdminProductsFromProxy();
+    } catch (error) {
+      lastError = error;
+      if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 350));
+    }
+  }
+
+  const supabase = getSupabase();
+  if (supabase) {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .order('id', { ascending: false });
+    if (!error) return (data || []).map(normalizeProductRow);
+    lastError = error;
+  }
+
+  if (lastError instanceof Error) throw lastError;
+  throw new Error('Unable to load products. Please try Refresh again.');
 }
 
 export async function createProduct(product: Omit<SupabaseProductRow, 'id'>): Promise<SupabaseProductRow> {
@@ -183,7 +212,7 @@ export async function uploadProductImage(file: File): Promise<string> {
   let binary = '';
   const chunkSize = 0x8000;
   for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, i + chunkSize, bytes.length)));
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
   }
   const base64 = btoa(binary);
   const extension = file.name.includes('.') ? file.name.split('.').pop() : file.type.split('/')[1];
