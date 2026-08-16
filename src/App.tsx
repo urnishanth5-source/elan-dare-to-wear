@@ -87,11 +87,7 @@ export function App() {
       ? prev.map(item => item.product.id === product.id && item.selectedSize === size ? { ...item, quantity: item.quantity + 1 } : item)
       : [...prev, { product, quantity: 1, selectedSize: size }];
   });
-
-  const handleUpdateQuantity = (productId: string, delta: number, size?: string) => setCartItems(prev => prev
-    .map(item => item.product.id === productId && item.selectedSize === size ? { ...item, quantity: item.quantity + delta } : item)
-    .filter(item => item.quantity > 0));
-
+  const handleUpdateQuantity = (productId: string, delta: number, size?: string) => setCartItems(prev => prev.map(item => item.product.id === productId && item.selectedSize === size ? { ...item, quantity: item.quantity + delta } : item).filter(item => item.quantity > 0));
   const handleRemoveCartItem = (productId: string, size?: string) => setCartItems(prev => prev.filter(item => !(item.product.id === productId && item.selectedSize === size)));
   const handleClearCart = () => setCartItems([]);
   const handleOpenWhatsApp = (topicOrProductName?: string) => { setWhatsAppTopic(topicOrProductName); setWhatsAppProduct(null); setIsWhatsAppOpen(true); };
@@ -103,19 +99,17 @@ export function App() {
   const cartProductIds = cartItems.map(item => item.product.id);
 
   if (activeTab === 'admin') {
-    return (
-      <AdminDashboard
-        onBackToStore={() => { setActiveTab('home'); loadStoreProducts(); }}
-        onLogout={() => setActiveTab('home')}
-      />
-    );
+    return <AdminDashboard
+      onBackToStore={() => { setActiveTab('home'); loadStoreProducts(); }}
+      onLogout={() => setActiveTab('home')}
+    />;
   }
 
   return (
     <div className="min-h-screen bg-[#090a0f] text-[#f1f5f9] flex flex-col justify-between selection:bg-blue-600 selection:text-white">
       <div>
         <Navbar activeTab={activeTab} setActiveTab={setActiveTab} cartCount={cartCount} openCart={() => setIsCartOpen(true)} currency={currency} toggleCurrency={toggleCurrency} openWhatsAppModal={() => handleOpenWhatsApp('General Stylist Advice')} isAdminLoggedIn={false} />
-        {dbError && <div className="bg-rose-500/10 border-b border-rose-500/20 text-rose-300 py-2.5 px-4 text-xs"><div className="max-w-7xl mx-auto flex items-center justify-between gap-2"><div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-rose-400 shrink-0" /><span>Supabase connection notice: {dbError}</span></div><button onClick={() => setActiveTab('admin')} className="underline font-bold hover:text-white shrink-0">Configure in Admin</button></div></div>}
+        {dbError && <div className="bg-rose-500/10 border-b border-rose-500/20 text-rose-300 py-2.5 px-4 text-xs"><div className="max-w-7xl mx-auto flex items-center justify-between gap-2"><div className="flex items-center gap-2"><AlertCircle className="w-4 h-4 text-rose-400 shrink-0" /><span>Supabase connection notice: {dbError}</span></div><button onClick={() => setActiveTab('admin')} className="underline font-bold hover:text-white shrink-0">Open Admin</button></div></div>}
         <main className="pb-12">
           {activeTab === 'home' && <HomeScreen products={products} loading={loadingProducts} currency={currency} setActiveTab={setActiveTab} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
           {activeTab === 'collections' && <CollectionsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
