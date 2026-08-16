@@ -42,8 +42,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             window.scrollTo({ top: 0, behavior: 'smooth' });
           }}
           className="flex items-center gap-2 group focus:outline-none"
+          aria-label="elan. home"
         >
-          <span className="text-2xl sm:text-3xl font-extrabold tracking-tighter text-white">elan.</span>
+          <img
+            src="/elan-logo.svg"
+            alt="elan Dare to Wear"
+            className="w-24 sm:w-28 h-auto object-contain"
+          />
         </button>
 
         <nav className="hidden lg:flex items-center gap-7 text-xs font-semibold uppercase tracking-wider">
