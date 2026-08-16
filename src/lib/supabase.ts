@@ -107,9 +107,6 @@ async function fetchAdminProductsFromProxy(): Promise<SupabaseProductRow[]> {
 }
 
 export async function fetchAllProductsAdmin(): Promise<SupabaseProductRow[]> {
-  // Prefer the Vercel-side proxy. If the browser briefly loses the proxy
-  // connection, fall back to the same Supabase database using the publishable
-  // client so the admin page does not get stuck on a transient "Failed to fetch".
   let lastError: unknown = null;
 
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -203,31 +200,29 @@ function normalizeProductRow(row: any): SupabaseProductRow {
 }
 
 export async function uploadProductImage(file: File): Promise<string> {
-  if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+  const supabase = getSupabase();
+  if (!supabase) throw new Error('Supabase is not configured.');
   if (!file.type.startsWith('image/')) throw new Error('Please select an image file.');
   if (file.size > 4 * 1024 * 1024) throw new Error('Image is too large. Please use an image under 4 MB.');
 
-  const arrayBuffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(arrayBuffer);
-  let binary = '';
-  const chunkSize = 0x8000;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
-  }
-  const base64 = btoa(binary);
+  // Upload directly from the browser to the public `products` bucket.
+  // This avoids the Vercel `/api/upload` proxy, which was the source of the
+  // intermittent "Failed to fetch" errors and broken image URLs.
   const extension = file.name.includes('.') ? file.name.split('.').pop() : file.type.split('/')[1];
+  const safeExtension = String(extension || 'jpg').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'jpg';
+  const filePath = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}.${safeExtension}`;
 
-  const response = await fetch('/api/upload', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ base64, contentType: file.type, extension }),
-  });
+  const { error } = await supabase.storage
+    .from('products')
+    .upload(filePath, file, {
+      contentType: file.type,
+      cacheControl: '3600',
+      upsert: true,
+    });
 
-  const body = await response.text();
-  let data: any = null;
-  try { data = JSON.parse(body); } catch { /* handled below */ }
-  if (!response.ok || !data?.publicUrl) {
-    throw new Error(data?.error || body || `Image upload failed (${response.status}).`);
-  }
+  if (error) throw new Error(`Image upload failed: ${error.message}`);
+
+  const { data } = supabase.storage.from('products').getPublicUrl(filePath);
+  if (!data?.publicUrl) throw new Error('Image uploaded, but a public URL could not be generated.');
   return data.publicUrl;
 }
