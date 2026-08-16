@@ -61,8 +61,6 @@ export const getSupabase = (): SupabaseClient | null => {
   return supabaseInstance;
 };
 
-// Local product storage is intentionally disabled for production so all devices
-// use the same Supabase catalog. Clear any products from the previous local demo.
 export function getLocalProducts(): SupabaseProductRow[] {
   if (typeof window !== 'undefined') localStorage.removeItem('elan_local_products_db');
   return [];
@@ -72,8 +70,6 @@ export function saveLocalProducts(_products: SupabaseProductRow[]) {
   if (typeof window !== 'undefined') localStorage.removeItem('elan_local_products_db');
 }
 
-// Storefront reads go through the Vercel API proxy so customer devices do not
-// have to connect directly to the Supabase hostname.
 async function fetchStorefrontProducts(category?: ProductCategory): Promise<SupabaseProductRow[]> {
   const url = category ? `/api/products?category=${encodeURIComponent(category)}` : '/api/products';
   const response = await fetch(url, { cache: 'no-store' });
@@ -96,11 +92,18 @@ export async function fetchActiveProductsByCategory(category: ProductCategory): 
 }
 
 export async function fetchAllProductsAdmin(): Promise<SupabaseProductRow[]> {
-  const supabase = getSupabase();
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('products').select('*').order('id', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(normalizeProductRow);
+  // Use the same Vercel-side proxy as the storefront. This avoids browser-side
+  // Supabase network/CORS failures in the admin portal while keeping the catalog
+  // backed by the same database.
+  const response = await fetch('/api/products?admin=true', { cache: 'no-store' });
+  const body = await response.text();
+  if (!response.ok) {
+    let message = body || `Product API returned ${response.status}`;
+    try { message = JSON.parse(body).error || message; } catch { /* keep raw message */ }
+    throw new Error(message);
+  }
+  const data = JSON.parse(body);
+  return (Array.isArray(data) ? data : []).map(normalizeProductRow);
 }
 
 export async function createProduct(product: Omit<SupabaseProductRow, 'id'>): Promise<SupabaseProductRow> {
@@ -170,9 +173,6 @@ function normalizeProductRow(row: any): SupabaseProductRow {
   };
 }
 
-// Upload through the Vercel API proxy instead of directly from the browser.
-// This avoids browser-side Supabase Storage fetch/CORS failures while keeping
-// the Supabase hostname and storage handling off the customer device.
 export async function uploadProductImage(file: File): Promise<string> {
   if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
   if (!file.type.startsWith('image/')) throw new Error('Please select an image file.');
@@ -183,7 +183,7 @@ export async function uploadProductImage(file: File): Promise<string> {
   let binary = '';
   const chunkSize = 0x8000;
   for (let i = 0; i < bytes.length; i += chunkSize) {
-    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, i + chunkSize, bytes.length)));
   }
   const base64 = btoa(binary);
   const extension = file.name.includes('.') ? file.name.split('.').pop() : file.type.split('/')[1];
