@@ -1,5 +1,4 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { SAMPLE_SEED_PRODUCTS } from '../data/products';
 
 const DEFAULT_SUPABASE_URL = 'https://rwvkryjtdgvowythuvjx.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_hCUXYQ5LUK4XA5mL5y6ePQ_IrFvxQN0';
@@ -7,10 +6,7 @@ const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_hCUXYQ5LUK4XA5mL5y6ePQ_IrFvxQN
 const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || DEFAULT_SUPABASE_URL;
 const envAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || DEFAULT_SUPABASE_ANON_KEY;
 
-export const getStoredConfig = () => ({
-  url: envUrl,
-  key: envAnonKey,
-});
+export const getStoredConfig = () => ({ url: envUrl, key: envAnonKey });
 
 export const isSupabaseConfigured = (): boolean => {
   const { url, key } = getStoredConfig();
@@ -18,8 +14,6 @@ export const isSupabaseConfigured = (): boolean => {
 };
 
 export const saveSupabaseConfig = (url: string, anonKey: string) => {
-  // Keep this for backwards compatibility with the existing admin UI.
-  // Production authentication always uses the deployed environment/default config above.
   if (!url.trim() || !anonKey.trim()) return;
   localStorage.removeItem('elan_supabase_url');
   localStorage.removeItem('elan_supabase_anon_key');
@@ -30,12 +24,13 @@ export const saveSupabaseConfig = (url: string, anonKey: string) => {
 export const clearSupabaseConfig = () => {
   localStorage.removeItem('elan_supabase_url');
   localStorage.removeItem('elan_supabase_anon_key');
+  localStorage.removeItem('elan_local_products_db');
   supabaseInstance = null;
   window.location.reload();
 };
 
 export interface SupabaseProductRow {
-  id: string;
+  id: number;
   name: string;
   price: number;
   sale_price: number | null;
@@ -43,7 +38,6 @@ export interface SupabaseProductRow {
   category: 'T-Shirts' | 'Linen Shirts & Pants' | 'Summer Collection' | "Kids' Wear";
   stock: number;
   is_active: boolean;
-  created_at?: string;
 }
 
 export const CATEGORY_OPTIONS = ['T-Shirts', 'Linen Shirts & Pants', 'Summer Collection', "Kids' Wear"] as const;
@@ -67,130 +61,117 @@ export const getSupabase = (): SupabaseClient | null => {
   return supabaseInstance;
 };
 
-const LOCAL_DB_KEY = 'elan_local_products_db';
-
+// Local product storage is intentionally disabled for production so all devices
+// use the same Supabase catalog. Clear any products from the previous local demo.
 export function getLocalProducts(): SupabaseProductRow[] {
-  if (typeof window === 'undefined') return [];
-  try {
-    const raw = localStorage.getItem(LOCAL_DB_KEY);
-    if (!raw) {
-      const initial: SupabaseProductRow[] = SAMPLE_SEED_PRODUCTS.map((p, idx) => ({ ...p, id: `local-prod-${idx + 1}`, created_at: new Date(Date.now() - idx * 3600000).toISOString() }));
-      localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(initial));
-      return initial;
-    }
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
+  if (typeof window !== 'undefined') localStorage.removeItem('elan_local_products_db');
+  return [];
 }
 
-export function saveLocalProducts(products: SupabaseProductRow[]) {
-  if (typeof window !== 'undefined') localStorage.setItem(LOCAL_DB_KEY, JSON.stringify(products));
+export function saveLocalProducts(_products: SupabaseProductRow[]) {
+  if (typeof window !== 'undefined') localStorage.removeItem('elan_local_products_db');
 }
 
 export async function fetchActiveProducts(): Promise<SupabaseProductRow[]> {
   const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('products').select('*').eq('is_active', true).order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) return data;
-    } catch (err) { console.warn('Supabase fetch active products fallback to local:', err); }
-  }
-  return getLocalProducts().filter((p) => p.is_active);
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('products').select('*').eq('is_active', true).order('id', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(normalizeProductRow);
 }
 
 export async function fetchActiveProductsByCategory(category: ProductCategory): Promise<SupabaseProductRow[]> {
   const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('products').select('*').eq('is_active', true).eq('category', category).order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) return data;
-    } catch (err) { console.warn(`Supabase fetch category ${category} fallback to local:`, err); }
-  }
-  return getLocalProducts().filter((p) => p.is_active && p.category === category);
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('products').select('*').eq('is_active', true).eq('category', category).order('id', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(normalizeProductRow);
 }
 
 export async function fetchAllProductsAdmin(): Promise<SupabaseProductRow[]> {
   const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-      if (!error && data) return data;
-    } catch (err) { console.warn('Supabase admin fetch fallback to local:', err); }
-  }
-  return getLocalProducts();
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('products').select('*').order('id', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(normalizeProductRow);
 }
 
-export async function createProduct(product: Omit<SupabaseProductRow, 'id' | 'created_at'>): Promise<SupabaseProductRow> {
+export async function createProduct(product: Omit<SupabaseProductRow, 'id'>): Promise<SupabaseProductRow> {
   const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('products').insert([product]).select().single();
-      if (!error && data) { saveLocalProducts([data, ...getLocalProducts()]); return data; }
-    } catch (err) { console.warn('Supabase create fallback to local:', err); }
-  }
-  const newRow: SupabaseProductRow = { ...product, id: `local-prod-${Date.now()}`, created_at: new Date().toISOString() };
-  saveLocalProducts([newRow, ...getLocalProducts()]);
-  return newRow;
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const dbProduct = {
+    name: product.name,
+    price: product.price,
+    sales_price: product.sale_price,
+    image_url: product.image_url,
+    category: product.category,
+    stock: product.stock,
+    is_active: product.is_active,
+  };
+  const { data, error } = await supabase.from('products').insert([dbProduct]).select().single();
+  if (error) throw error;
+  return normalizeProductRow(data);
 }
 
-export async function updateProduct(id: string, updates: Partial<Omit<SupabaseProductRow, 'id' | 'created_at'>>): Promise<SupabaseProductRow> {
+export async function updateProduct(id: number, updates: Partial<Omit<SupabaseProductRow, 'id'>>): Promise<SupabaseProductRow> {
   const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('products').update(updates).eq('id', id).select().single();
-      if (!error && data) { saveLocalProducts(getLocalProducts().map((p) => p.id === id ? { ...p, ...data } : p)); return data; }
-    } catch (err) { console.warn('Supabase update fallback to local:', err); }
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const dbUpdates: Record<string, unknown> = { ...updates };
+  if ('sale_price' in dbUpdates) {
+    dbUpdates.sales_price = dbUpdates.sale_price;
+    delete dbUpdates.sale_price;
   }
-  const current = getLocalProducts();
-  let updatedRow: SupabaseProductRow | null = null;
-  const next = current.map((p) => {
-    if (p.id === id) { updatedRow = { ...p, ...updates }; return updatedRow; }
-    return p;
-  });
-  saveLocalProducts(next);
-  return updatedRow || ({ id, ...updates } as SupabaseProductRow);
+  const { data, error } = await supabase.from('products').update(dbUpdates).eq('id', id).select().single();
+  if (error) throw error;
+  return normalizeProductRow(data);
 }
 
-export async function deleteProduct(id: string): Promise<void> {
+export async function deleteProduct(id: number): Promise<void> {
   const supabase = getSupabase();
-  if (supabase) {
-    try { await supabase.from('products').delete().eq('id', id); } catch (err) { console.warn('Supabase delete fallback to local:', err); }
-  }
-  saveLocalProducts(getLocalProducts().filter((p) => p.id !== id));
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const { error } = await supabase.from('products').delete().eq('id', id);
+  if (error) throw error;
 }
 
-export async function seedSampleProducts(sampleRows: Omit<SupabaseProductRow, 'id' | 'created_at'>[]): Promise<number> {
+export async function seedSampleProducts(sampleRows: Omit<SupabaseProductRow, 'id'>[]): Promise<number> {
   const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('products').insert(sampleRows).select();
-      if (!error && data) { saveLocalProducts(data); return data.length; }
-    } catch (err) { console.warn('Supabase seed fallback to local:', err); }
-  }
-  const seeded = sampleRows.map((row, idx) => ({ ...row, id: `local-seed-${Date.now()}-${idx + 1}`, created_at: new Date().toISOString() }));
-  saveLocalProducts(seeded);
-  return seeded.length;
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const dbRows = sampleRows.map((row) => ({
+    name: row.name,
+    price: row.price,
+    sales_price: row.sale_price,
+    image_url: row.image_url,
+    category: row.category,
+    stock: row.stock,
+    is_active: row.is_active,
+  }));
+  const { data, error } = await supabase.from('products').insert(dbRows).select();
+  if (error) throw error;
+  return data?.length || 0;
+}
+
+function normalizeProductRow(row: any): SupabaseProductRow {
+  return {
+    id: Number(row.id),
+    name: row.name,
+    price: Number(row.price || 0),
+    sale_price: row.sales_price == null ? null : Number(row.sales_price),
+    image_url: row.image_url || '',
+    category: row.category as ProductCategory,
+    stock: Number(row.stock || 0),
+    is_active: row.is_active !== false,
+  };
 }
 
 export async function uploadProductImage(file: File): Promise<string> {
   const supabase = getSupabase();
-  if (supabase) {
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-      const filePath = `products/${fileName}`;
-      const { error: uploadError } = await supabase.storage.from('products').upload(filePath, file, { cacheControl: '3600', upsert: false });
-      if (!uploadError) {
-        const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(filePath);
-        if (publicUrlData?.publicUrl) return publicUrlData.publicUrl;
-      }
-    } catch (err) { console.warn('Supabase storage upload error, falling back to data URL:', err); }
-  }
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = (err) => reject(err);
-    reader.readAsDataURL(file);
-  });
+  if (!supabase) throw new Error('Supabase is not configured.');
+  const fileExt = file.name.split('.').pop();
+  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
+  const filePath = `products/${fileName}`;
+  const { error: uploadError } = await supabase.storage.from('products').upload(filePath, file, { cacheControl: '3600', upsert: false });
+  if (uploadError) throw uploadError;
+  const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(filePath);
+  if (!publicUrlData?.publicUrl) throw new Error('Could not create a public image URL.');
+  return publicUrlData.publicUrl;
 }
