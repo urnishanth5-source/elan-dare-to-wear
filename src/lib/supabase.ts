@@ -72,20 +72,27 @@ export function saveLocalProducts(_products: SupabaseProductRow[]) {
   if (typeof window !== 'undefined') localStorage.removeItem('elan_local_products_db');
 }
 
+// Storefront reads go through the Vercel API proxy so customer devices do not
+// have to connect directly to the Supabase hostname.
+async function fetchStorefrontProducts(category?: ProductCategory): Promise<SupabaseProductRow[]> {
+  const url = category ? `/api/products?category=${encodeURIComponent(category)}` : '/api/products';
+  const response = await fetch(url, { cache: 'no-store' });
+  const body = await response.text();
+  if (!response.ok) {
+    let message = body || `Product API returned ${response.status}`;
+    try { message = JSON.parse(body).error || message; } catch { /* keep raw message */ }
+    throw new Error(message);
+  }
+  const data = JSON.parse(body);
+  return (Array.isArray(data) ? data : []).map(normalizeProductRow);
+}
+
 export async function fetchActiveProducts(): Promise<SupabaseProductRow[]> {
-  const supabase = getSupabase();
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('products').select('*').eq('is_active', true).order('id', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(normalizeProductRow);
+  return fetchStorefrontProducts();
 }
 
 export async function fetchActiveProductsByCategory(category: ProductCategory): Promise<SupabaseProductRow[]> {
-  const supabase = getSupabase();
-  if (!supabase) return [];
-  const { data, error } = await supabase.from('products').select('*').eq('is_active', true).eq('category', category).order('id', { ascending: false });
-  if (error) throw error;
-  return (data || []).map(normalizeProductRow);
+  return fetchStorefrontProducts(category);
 }
 
 export async function fetchAllProductsAdmin(): Promise<SupabaseProductRow[]> {
