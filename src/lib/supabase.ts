@@ -170,15 +170,35 @@ function normalizeProductRow(row: any): SupabaseProductRow {
   };
 }
 
+// Upload through the Vercel API proxy instead of directly from the browser.
+// This avoids browser-side Supabase Storage fetch/CORS failures while keeping
+// the Supabase hostname and storage handling off the customer device.
 export async function uploadProductImage(file: File): Promise<string> {
-  const supabase = getSupabase();
-  if (!supabase) throw new Error('Supabase is not configured.');
-  const fileExt = file.name.split('.').pop();
-  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-  const filePath = `products/${fileName}`;
-  const { error: uploadError } = await supabase.storage.from('products').upload(filePath, file, { cacheControl: '3600', upsert: false });
-  if (uploadError) throw uploadError;
-  const { data: publicUrlData } = supabase.storage.from('products').getPublicUrl(filePath);
-  if (!publicUrlData?.publicUrl) throw new Error('Could not create a public image URL.');
-  return publicUrlData.publicUrl;
+  if (!isSupabaseConfigured()) throw new Error('Supabase is not configured.');
+  if (!file.type.startsWith('image/')) throw new Error('Please select an image file.');
+  if (file.size > 4 * 1024 * 1024) throw new Error('Image is too large. Please use an image under 4 MB.');
+
+  const arrayBuffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+  let binary = '';
+  const chunkSize = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, Math.min(i + chunkSize, bytes.length)));
+  }
+  const base64 = btoa(binary);
+  const extension = file.name.includes('.') ? file.name.split('.').pop() : file.type.split('/')[1];
+
+  const response = await fetch('/api/upload', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ base64, contentType: file.type, extension }),
+  });
+
+  const body = await response.text();
+  let data: any = null;
+  try { data = JSON.parse(body); } catch { /* handled below */ }
+  if (!response.ok || !data?.publicUrl) {
+    throw new Error(data?.error || body || `Image upload failed (${response.status}).`);
+  }
+  return data.publicUrl;
 }
