@@ -12,11 +12,10 @@ import { ProductModal } from './components/ProductModal';
 import { WhatsAppModal } from './components/WhatsAppModal';
 import { CartDrawer, CartItem } from './components/CartDrawer';
 import { Footer } from './components/Footer';
-import { AdminLogin } from './components/AdminLogin';
 import { AdminDashboard } from './components/AdminDashboard';
 import { Product, mapSupabaseToProduct } from './data/products';
 import { fetchActiveProducts, getSupabase } from './lib/supabase';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -31,8 +30,6 @@ export function App() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
   const [dbError, setDbError] = useState<string | null>(null);
-  const [isAdminLoggedIn, setIsAdminLoggedIn] = useState<boolean>(false);
-  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isWhatsAppOpen, setIsWhatsAppOpen] = useState(false);
@@ -49,30 +46,17 @@ export function App() {
     };
     handleUrlRouting();
     window.addEventListener('popstate', handleUrlRouting);
-    return () => window.removeEventListener('popstate', handleUrlRouting);
+    window.addEventListener('hashchange', handleUrlRouting);
+    return () => {
+      window.removeEventListener('popstate', handleUrlRouting);
+      window.removeEventListener('hashchange', handleUrlRouting);
+    };
   }, []);
 
   useEffect(() => {
     if (activeTab === 'admin') window.history.pushState(null, '', '#admin');
     else if (window.location.hash === '#admin') window.history.pushState(null, '', '/');
   }, [activeTab]);
-
-  useEffect(() => {
-    const checkSession = async () => {
-      const supabase = getSupabase();
-      if (!supabase) { setCheckingAuth(false); return; }
-      try {
-        const { data } = await supabase.auth.getSession();
-        setIsAdminLoggedIn(Boolean(data?.session));
-        const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setIsAdminLoggedIn(Boolean(session)));
-        return () => listener.subscription.unsubscribe();
-      } catch (e) {
-        console.warn('Auth verification error:', e);
-        setIsAdminLoggedIn(false);
-      } finally { setCheckingAuth(false); }
-    };
-    checkSession();
-  }, []);
 
   useEffect(() => {
     loadStoreProducts();
@@ -83,24 +67,31 @@ export function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!isAdminLoggedIn || activeTab !== 'admin') return;
-    const timer = window.setTimeout(() => {
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const addProductButton = buttons.find((button) => button.textContent?.trim().includes('Add Product')) as HTMLButtonElement | undefined;
-      addProductButton?.click();
-    }, 250);
-    return () => window.clearTimeout(timer);
-  }, [isAdminLoggedIn, activeTab]);
-
   const loadStoreProducts = async () => {
-    try { setLoadingProducts(true); setDbError(null); const rows = await fetchActiveProducts(); setProducts(rows.map(mapSupabaseToProduct)); }
-    catch (err: any) { console.error('Failed to load active products:', err); setDbError(err.message || 'Could not fetch products.'); }
-    finally { setLoadingProducts(false); }
+    try {
+      setLoadingProducts(true);
+      setDbError(null);
+      const rows = await fetchActiveProducts();
+      setProducts(rows.map(mapSupabaseToProduct));
+    } catch (err: any) {
+      console.error('Failed to load active products:', err);
+      setDbError(err.message || 'Could not fetch products.');
+    } finally {
+      setLoadingProducts(false);
+    }
   };
 
-  const handleAddToCart = (product: Product, size?: string) => setCartItems(prev => { const existing = prev.find(item => item.product.id === product.id && item.selectedSize === size); return existing ? prev.map(item => item.product.id === product.id && item.selectedSize === size ? { ...item, quantity: item.quantity + 1 } : item) : [...prev, { product, quantity: 1, selectedSize: size }]; });
-  const handleUpdateQuantity = (productId: string, delta: number, size?: string) => setCartItems(prev => prev.map(item => item.product.id === productId && item.selectedSize === size ? { ...item, quantity: item.quantity + delta } : item).filter(item => item.quantity > 0));
+  const handleAddToCart = (product: Product, size?: string) => setCartItems(prev => {
+    const existing = prev.find(item => item.product.id === product.id && item.selectedSize === size);
+    return existing
+      ? prev.map(item => item.product.id === product.id && item.selectedSize === size ? { ...item, quantity: item.quantity + 1 } : item)
+      : [...prev, { product, quantity: 1, selectedSize: size }];
+  });
+
+  const handleUpdateQuantity = (productId: string, delta: number, size?: string) => setCartItems(prev => prev
+    .map(item => item.product.id === productId && item.selectedSize === size ? { ...item, quantity: item.quantity + delta } : item)
+    .filter(item => item.quantity > 0));
+
   const handleRemoveCartItem = (productId: string, size?: string) => setCartItems(prev => prev.filter(item => !(item.product.id === productId && item.selectedSize === size)));
   const handleClearCart = () => setCartItems([]);
   const handleOpenWhatsApp = (topicOrProductName?: string) => { setWhatsAppTopic(topicOrProductName); setWhatsAppProduct(null); setIsWhatsAppOpen(true); };
@@ -108,21 +99,16 @@ export function App() {
   const handleOpenQuickView = (product: Product) => { setSelectedProduct(product); setIsProductModalOpen(true); };
   const toggleCurrency = () => setCurrency(prev => prev === 'INR' ? 'USD' : 'INR');
 
-  const handleAdminLogout = async () => {
-    localStorage.removeItem('elan_admin_authenticated');
-    localStorage.removeItem('elan_admin_email');
-    const supabase = getSupabase();
-    if (supabase) { try { await supabase.auth.signOut(); } catch (e) { console.warn('Signout note:', e); } }
-    setIsAdminLoggedIn(false); setActiveTab('home');
-  };
-
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartProductIds = cartItems.map(item => item.product.id);
 
   if (activeTab === 'admin') {
-    if (checkingAuth) return <div className="min-h-screen bg-[#090a0f] flex items-center justify-center text-white"><RefreshCw className="w-6 h-6 animate-spin text-blue-500" /></div>;
-    if (!isAdminLoggedIn) return <AdminLogin onLoginSuccess={() => { setIsAdminLoggedIn(true); loadStoreProducts(); }} onBackToStore={() => setActiveTab('home')} />;
-    return <AdminDashboard onBackToStore={() => { setActiveTab('home'); loadStoreProducts(); }} onLogout={handleAdminLogout} />;
+    return (
+      <AdminDashboard
+        onBackToStore={() => { setActiveTab('home'); loadStoreProducts(); }}
+        onLogout={() => setActiveTab('home')}
+      />
+    );
   }
 
   return (
