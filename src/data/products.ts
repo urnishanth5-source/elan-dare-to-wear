@@ -64,7 +64,7 @@ export function mapSupabaseToProduct(row: SupabaseProductRow): Product {
     isActive: row.is_active,
     tag: tag,
     sizes: sizes,
-    fabric: row.category === 'Linen Shirts & Pants' ? '100% Breathable Pure Linen' : '100% Combed Compact Cotton',
+    fabric: row.category === 'Shirts and Pant' ? '100% Breathable Pure Linen' : '100% Combed Compact Cotton',
     fit: row.category === 'T-Shirts' ? 'Relaxed Drop-Shoulder' : 'Modern Tailored Comfort',
     ageGroup: ageGroup,
     rating: 4.8,
@@ -102,13 +102,13 @@ export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>
     is_active: true,
   },
 
-  // 2. Linen Shirts & Pants
+  // 2. Shirts and Pant
   {
     name: 'Pure Flax Linen Relaxed Band Collar Shirt (Sky Blue)',
     price: 1399,
     sale_price: 1199,
     image_url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop',
-    category: 'Linen Shirts & Pants',
+    category: 'Shirts and Pant',
     stock: 15,
     is_active: true,
   },
@@ -117,7 +117,7 @@ export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>
     price: 1299,
     sale_price: null,
     image_url: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=800&auto=format&fit=crop',
-    category: 'Linen Shirts & Pants',
+    category: 'Shirts and Pant',
     stock: 20,
     is_active: true,
   },
@@ -126,7 +126,7 @@ export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>
     price: 1499,
     sale_price: 1299,
     image_url: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?q=80&w=800&auto=format&fit=crop',
-    category: 'Linen Shirts & Pants',
+    category: 'Shirts and Pant',
     stock: 8,
     is_active: true,
   },
@@ -200,8 +200,8 @@ export const CATEGORY_METADATA: Record<ProductCategory | 'new-arrivals' | 'summe
     badge: 'Heavyweight Cotton',
     subtitle: '240gsm high-density compact combed cotton with tailored neck ribs and dropped shoulders.',
   },
-  'Linen Shirts & Pants': {
-    title: 'Linen Shirts & Relaxed Pants',
+  'Shirts and Pant': {
+    title: 'Shirts and Pant',
     badge: 'Pure Linen Weave',
     subtitle: 'Breathable, pre-washed flax linens designed for airy elegance and tropical Coimbatore days.',
   },
