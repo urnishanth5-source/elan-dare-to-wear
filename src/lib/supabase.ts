@@ -35,12 +35,12 @@ export interface SupabaseProductRow {
   price: number;
   sale_price: number | null;
   image_url: string;
-  category: 'T-Shirts' | 'Linen Shirts & Pants' | 'Summer Collection' | "Kids' Wear";
+  category: 'T-Shirts' | 'Shirts and Pant' | 'Summer Collection' | "Kids' Wear";
   stock: number;
   is_active: boolean;
 }
 
-export const CATEGORY_OPTIONS = ['T-Shirts', 'Linen Shirts & Pants', 'Summer Collection', "Kids' Wear"] as const;
+export const CATEGORY_OPTIONS = ['T-Shirts', 'Shirts and Pant', 'Summer Collection', "Kids' Wear"] as const;
 export type ProductCategory = typeof CATEGORY_OPTIONS[number];
 
 let supabaseInstance: SupabaseClient | null = null;
