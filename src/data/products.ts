@@ -1,6 +1,5 @@
 import { ProductCategory, SupabaseProductRow } from '../lib/supabase';
 
-// App product interface representing dynamic database entries
 export interface Product {
   id: string;
   name: string;
@@ -23,16 +22,12 @@ export interface Product {
   featuredIn?: string[];
 }
 
-export const INR_TO_USD_RATE = 0.012; // ~ ₹83 per USD
+export const INR_TO_USD_RATE = 0.012;
 
-/**
- * Converts Supabase Database row to the frontend Product model
- */
 export function mapSupabaseToProduct(row: SupabaseProductRow): Product {
   const priceUSD = Math.max(1, Math.round(row.price * INR_TO_USD_RATE));
   const salePriceUSD = row.sale_price ? Math.max(1, Math.round(row.sale_price * INR_TO_USD_RATE)) : null;
 
-  // Determine smart tag based on category, stock, or sale
   let tag: string | undefined = undefined;
   if (row.sale_price && row.sale_price < row.price) {
     tag = 'SALE';
@@ -42,7 +37,6 @@ export function mapSupabaseToProduct(row: SupabaseProductRow): Product {
     tag = 'SUMMER';
   }
 
-  // Determine standard sizes based on category
   let sizes: string[] = ['S', 'M', 'L', 'XL', 'XXL'];
   let ageGroup: string | undefined = undefined;
 
@@ -55,25 +49,23 @@ export function mapSupabaseToProduct(row: SupabaseProductRow): Product {
     id: row.id,
     name: row.name,
     priceINR: row.price,
-    priceUSD: priceUSD,
+    priceUSD,
     salePriceINR: row.sale_price,
-    salePriceUSD: salePriceUSD,
+    salePriceUSD,
     image: row.image_url || 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=1000&auto=format&fit=crop',
     category: row.category,
     stock: row.stock,
     isActive: row.is_active,
-    tag: tag,
-    sizes: sizes,
-    fabric: row.category === 'Shirts and Pant' ? '100% Breathable Pure Linen' : '100% Combed Compact Cotton',
+    tag,
+    sizes,
+    fabric: row.category === 'Shirts' || row.category === 'Pants' ? '100% Breathable Pure Linen' : '100% Combed Compact Cotton',
     fit: row.category === 'T-Shirts' ? 'Relaxed Drop-Shoulder' : 'Modern Tailored Comfort',
-    ageGroup: ageGroup,
+    ageGroup,
     rating: 4.8,
   };
 }
 
-// Initial Sample Products across all 4 categories
 export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>[] = [
-  // 1. T-Shirts
   {
     name: '240 GSM Heavyweight Drop-Shoulder Tee (Obsidian)',
     price: 699,
@@ -101,14 +93,12 @@ export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>
     stock: 12,
     is_active: true,
   },
-
-  // 2. Shirts and Pant
   {
     name: 'Pure Flax Linen Relaxed Band Collar Shirt (Sky Blue)',
     price: 1399,
     sale_price: 1199,
     image_url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop',
-    category: 'Shirts and Pant',
+    category: 'Shirts',
     stock: 15,
     is_active: true,
   },
@@ -117,7 +107,7 @@ export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>
     price: 1299,
     sale_price: null,
     image_url: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?q=80&w=800&auto=format&fit=crop',
-    category: 'Shirts and Pant',
+    category: 'Shirts',
     stock: 20,
     is_active: true,
   },
@@ -126,12 +116,10 @@ export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>
     price: 1499,
     sale_price: 1299,
     image_url: 'https://images.unsplash.com/photo-1473966968600-fa801b869a1a?q=80&w=800&auto=format&fit=crop',
-    category: 'Shirts and Pant',
+    category: 'Pants',
     stock: 8,
     is_active: true,
   },
-
-  // 3. Summer Collection
   {
     name: 'Breezy Seersucker Striped Summer Shirt (Citrus)',
     price: 999,
@@ -159,8 +147,6 @@ export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>
     stock: 10,
     is_active: true,
   },
-
-  // 4. Kids' Wear
   {
     name: "Boys' Cotton Casual Linen-Blend Set (Ages 3-8Y)",
     price: 799,
@@ -190,20 +176,21 @@ export const SAMPLE_SEED_PRODUCTS: Omit<SupabaseProductRow, 'id' | 'created_at'>
   },
 ];
 
-export const CATEGORY_METADATA: Record<ProductCategory | 'new-arrivals' | 'summer', {
-  title: string;
-  badge: string;
-  subtitle: string;
-}> = {
+export const CATEGORY_METADATA: Record<ProductCategory | 'new-arrivals' | 'summer', { title: string; badge: string; subtitle: string; }> = {
   'T-Shirts': {
     title: 'T-Shirts & Drop Shoulders',
     badge: 'Heavyweight Cotton',
     subtitle: '240gsm high-density compact combed cotton with tailored neck ribs and dropped shoulders.',
   },
-  'Shirts and Pant': {
-    title: 'Shirts and Pant',
+  'Shirts': {
+    title: 'Shirts',
     badge: 'Pure Linen Weave',
-    subtitle: 'Breathable, pre-washed flax linens designed for airy elegance and tropical Coimbatore days.',
+    subtitle: 'Breathable, pre-washed shirts designed for airy elegance and tropical Coimbatore days.',
+  },
+  'Pants': {
+    title: 'Pants',
+    badge: 'Tailored Linen',
+    subtitle: 'Comfortable, breathable trousers and pants designed for everyday wear in Coimbatore.',
   },
   'Summer Collection': {
     title: 'Summer 2024 Collection',
@@ -243,31 +230,7 @@ export const STORE_INFO = {
 };
 
 export const REVIEWS = [
-  {
-    id: 1,
-    name: 'Karthik Raja',
-    rating: 5,
-    date: '2 weeks ago',
-    comment: 'The 240gsm oversized t-shirts are top tier quality. Fabric feels heavy yet super soft in Coimbatore heat. Honest prices!',
-    initials: 'KR',
-    source: 'Google Review',
-  },
-  {
-    id: 2,
-    name: 'Priya Sundaram',
-    rating: 5,
-    date: '1 month ago',
-    comment: 'Bought linen shirts for my husband and soft cotton coords for my 4-year-old son. The staff in Sukrawarpet is extremely helpful.',
-    initials: 'PS',
-    source: 'Google Review',
-  },
-  {
-    id: 3,
-    name: 'Vignesh M',
-    rating: 5,
-    date: '3 weeks ago',
-    comment: 'Best ready-made store near Town Hall. The linen shirts fit like a glove and the pricing is very reasonable compared to malls.',
-    initials: 'VM',
-    source: 'Google Review',
-  },
+  { id: 1, name: 'Karthik Raja', rating: 5, date: '2 weeks ago', comment: 'The 240gsm oversized t-shirts are top tier quality. Fabric feels heavy yet super soft in Coimbatore heat. Honest prices!', initials: 'KR', source: 'Google Review' },
+  { id: 2, name: 'Priya Sundaram', rating: 5, date: '1 month ago', comment: 'Bought linen shirts for my husband and soft cotton coords for my 4-year-old son. The staff in Sukrawarpet is extremely helpful.', initials: 'PS', source: 'Google Review' },
+  { id: 3, name: 'Vignesh M', rating: 5, date: '3 weeks ago', comment: 'Best ready-made store near Town Hall. The linen shirts fit like a glove and the pricing is very reasonable compared to malls.', initials: 'VM', source: 'Google Review' },
 ];
