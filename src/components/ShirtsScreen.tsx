@@ -22,9 +22,9 @@ export const ShirtsScreen: React.FC<ShirtsScreenProps> = ({
   onAddToCart,
   cartProductIds,
 }) => {
-  // Strictly filter category === 'Linen Shirts & Pants'
-  const linenItems = products.filter((p) => p.category === 'Linen Shirts & Pants');
-  const meta = CATEGORY_METADATA['Linen Shirts & Pants'];
+  // Strictly filter the renamed category
+  const shirtPantItems = products.filter((p) => p.category === 'Shirts and Pant');
+  const meta = CATEGORY_METADATA['Shirts and Pant'];
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 space-y-8">
@@ -36,7 +36,7 @@ export const ShirtsScreen: React.FC<ShirtsScreenProps> = ({
             {meta.badge}
           </span>
           <span className="text-xs text-zinc-500">•</span>
-          <span className="text-xs text-zinc-400">{linenItems.length} in-store items</span>
+          <span className="text-xs text-zinc-400">{shirtPantItems.length} in-store items</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
           {meta.title}
@@ -50,19 +50,19 @@ export const ShirtsScreen: React.FC<ShirtsScreenProps> = ({
       {loading ? (
         <div className="text-center py-24 space-y-3">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto text-blue-500" />
-          <p className="text-sm font-semibold text-zinc-300">Loading Linen collection from Supabase...</p>
+          <p className="text-sm font-semibold text-zinc-300">Loading Shirts and Pant collection from Supabase...</p>
         </div>
-      ) : linenItems.length === 0 ? (
+      ) : shirtPantItems.length === 0 ? (
         <div className="text-center py-20 bg-[#12151d] rounded-2xl border border-white/[0.08] p-8 space-y-3">
           <ShoppingBag className="w-10 h-10 text-zinc-600 mx-auto" />
-          <h3 className="text-base font-bold text-white">No Linen items currently in stock</h3>
+          <h3 className="text-base font-bold text-white">No Shirts and Pant items currently in stock</h3>
           <p className="text-xs text-zinc-400">
-            Add items under category "Linen Shirts & Pants" in the Admin Dashboard to show them here.
+            Add items under category "Shirts and Pant" in the Admin Dashboard to show them here.
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {linenItems.map((product) => (
+          {shirtPantItems.map((product) => (
             <ProductCard
               key={product.id}
               product={product}
