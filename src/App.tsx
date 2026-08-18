@@ -4,6 +4,7 @@ import { HomeScreen } from './components/HomeScreen';
 import { CollectionsScreen } from './components/CollectionsScreen';
 import { TShirtsScreen } from './components/TShirtsScreen';
 import { ShirtsScreen } from './components/ShirtsScreen';
+import { PantsScreen } from './components/PantsScreen';
 import { SummerScreen } from './components/SummerScreen';
 import { KidsScreen } from './components/KidsScreen';
 import { NewArrivalsScreen } from './components/NewArrivalsScreen';
@@ -86,9 +87,7 @@ export function App() {
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   const cartProductIds = cartItems.map(item => item.product.id);
 
-  if (isAdminRoute) {
-    return <AdminDashboard onBackToStore={goToStore} onLogout={goToStore} />;
-  }
+  if (isAdminRoute) return <AdminDashboard onBackToStore={goToStore} onLogout={goToStore} />;
 
   return (
     <div className="min-h-screen bg-[#090a0f] text-[#f1f5f9] flex flex-col justify-between selection:bg-blue-600 selection:text-white">
@@ -100,6 +99,7 @@ export function App() {
           {activeTab === 'collections' && <CollectionsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
           {activeTab === 'tshirts' && <TShirtsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
           {activeTab === 'shirts' && <ShirtsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
+          {activeTab === 'pants' && <PantsScreen products={products} loading={loadingProducts} currency={currency} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
           {activeTab === 'summer' && <SummerScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
           {activeTab === 'kids' && <KidsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
           {activeTab === 'new-arrivals' && <NewArrivalsScreen products={products} loading={loadingProducts} currency={currency} openWhatsAppModal={handleOpenWhatsApp} onProductClick={handleOpenQuickView} onAddToCart={handleAddToCart} cartProductIds={cartProductIds} />}
