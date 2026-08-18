@@ -232,7 +232,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             </div>
           </div>
 
-          {/* Card 2: Linen Shirts & Pants */}
+          {/* Card 2: Shirts and Pant */}
           <div 
             onClick={() => {
               setActiveTab('shirts');
@@ -243,7 +243,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <div className="aspect-[4/4] overflow-hidden bg-[#181c26] relative">
               <img
                 src="https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?q=80&w=800&auto=format&fit=crop"
-                alt="Linen Shirts & Pants"
+                alt="Shirts and Pant"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[#12151d] via-transparent to-transparent" />
@@ -254,7 +254,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
             <div className="p-4 pt-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-white group-hover:text-blue-400 transition-colors">
-                  Linen Shirts & Pants
+                  Shirts and Pant
                 </h3>
                 <ArrowRight className="w-4 h-4 text-zinc-500 group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
               </div>
