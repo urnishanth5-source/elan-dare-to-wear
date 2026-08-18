@@ -35,12 +35,12 @@ export interface SupabaseProductRow {
   price: number;
   sale_price: number | null;
   image_url: string;
-  category: 'T-Shirts' | 'Shirts and Pant' | 'Summer Collection' | "Kids' Wear";
+  category: 'T-Shirts' | 'Shirts' | 'Pants' | 'Summer Collection' | "Kids' Wear";
   stock: number;
   is_active: boolean;
 }
 
-export const CATEGORY_OPTIONS = ['T-Shirts', 'Shirts and Pant', 'Summer Collection', "Kids' Wear"] as const;
+export const CATEGORY_OPTIONS = ['T-Shirts', 'Shirts', 'Pants', 'Summer Collection', "Kids' Wear"] as const;
 export type ProductCategory = typeof CATEGORY_OPTIONS[number];
 
 let supabaseInstance: SupabaseClient | null = null;
@@ -205,9 +205,6 @@ export async function uploadProductImage(file: File): Promise<string> {
   if (!file.type.startsWith('image/')) throw new Error('Please select an image file.');
   if (file.size > 4 * 1024 * 1024) throw new Error('Image is too large. Please use an image under 4 MB.');
 
-  // Upload directly from the browser to the public `products` bucket.
-  // This avoids the Vercel `/api/upload` proxy, which was the source of the
-  // intermittent "Failed to fetch" errors and broken image URLs.
   const extension = file.name.includes('.') ? file.name.split('.').pop() : file.type.split('/')[1];
   const safeExtension = String(extension || 'jpg').replace(/[^a-zA-Z0-9]/g, '').slice(0, 8) || 'jpg';
   const filePath = `${Date.now()}_${Math.random().toString(36).slice(2, 9)}.${safeExtension}`;
